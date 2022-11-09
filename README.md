@@ -1,4 +1,4 @@
-# GEGL-Extrusion 2. (Fork of GEGL Long Shadow)
+# GEGL-Extrusion 2. (Fork of GEGL Long Shadow) REQUIRES BEHIND BLEND MODE OR DUPLICATE LAYER BELOW!
 
 GEGL does a Long Shadow but with Pixel Data. As opposed to a Color fill. 
 
