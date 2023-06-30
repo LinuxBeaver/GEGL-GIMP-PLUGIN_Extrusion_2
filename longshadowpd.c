@@ -226,7 +226,7 @@ GeglOperationMetaClass *operation_meta_class = GEGL_OPERATION_META_CLASS (klass)
     "title",       _("Extrusion via Long Shadow"),
     "categories",  "Artistic",
     "reference-hash", "45ed1636v1f3agbr2549lfl5s001b2ac",
-    "description", _("Fork of the existing Long Shadow filter but it uses Pixel Data. You are required to use the behind blend mode. Or run this filter as a duplicate layer below your image.  "
+    "description", _("Fork of the existing Long Shadow filter but it uses Pixel Data. "
                      ""),
     NULL);
 }
