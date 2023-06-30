@@ -17,60 +17,24 @@
  * 2022 LongShadow Pixel Data (Beaver)
  */
 
+/*
+
+Recreation of GEGL Graph - May not be 100% accurate or complete but shows the process of how I forked long shadow.
+If you feed this to Gimp's GEGL Graph filter you can test this plugin without installing it.
+
+id=0
+dst-over aux=[ ref=0 
+id=1
+long-shadow composition=shadow-only angle=44 length=19
+src-atop aux=[ ref=1 motion-blur angle=44 length=39 ]
+]
+ */
+
+
 #include "config.h"
 #include <glib/gi18n-lib.h>
 
 #ifdef GEGL_PROPERTIES
-
-
-enum_start (gegl_long_shadow_style2)
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FINITE2,              "finite2",              N_("Finite"))
-  enum_value      (GEGL_LONG_SHADOW_STYLE_INFINITE2,            "infinite2",            N_(""))
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FADING2,              "fading2",              N_(""))
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FADING_FIXED_LENGTH2, "fading-fixed-length2", N_("Fading (fixed length)"))
-#ifdef WITH_FADING_FIXED_RATE
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FADING_FIXED_RATE2,   "fading-fixed-length-stretch2",   N_("Fading (fixed rate)2"))
-#else
-  enum_value_skip (GEGL_LONG_SHADOW_STYLE_FADING_FIXED_RATE2)
-#endif
-enum_end (GeglLongShadowStyle2)
-
-enum_start (gegl_long_shadow_composition2)
-  enum_value (GEGL_LONG_SHADOW_COMPOSITION_SHADOW_PLUS_IMAGE2,  "shadow-plus-image2",  N_("Shadow plus image mode"))
-  enum_value (GEGL_LONG_SHADOW_COMPOSITION_SHADOW_ONLY2,        "shadow-only2",        N_("Shadow only mode"))
-  enum_value (GEGL_LONG_SHADOW_COMPOSITION_SHADOW_MINUS_IMAGE2, "shadow-minus-image2", N_("Shadow minus image mode"))
-enum_end (GeglLongShadowComposition2)
-
-property_enum (style, _("Style"),
-               GeglLongShadowStyle2, gegl_long_shadow_style2,
-               GEGL_LONG_SHADOW_STYLE_FINITE2)
-  description (_("Shadow style"))
-    ui_meta     ("role", "output-extent")
-
-
-enum_start (gegl_long_shadow_style3)
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FINITE3,              "finite3",              N_("Finite"))
-  enum_value      (GEGL_LONG_SHADOW_STYLE_INFINITE3,            "infinite3",            N_(""))
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FADING3,              "fading3",              N_(""))
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FADING_FIXED_LENGTH3, "fading-fixed-length3", N_("Fading (fixed length)"))
-#ifdef WITH_FADING_FIXED_RATE
-  enum_value      (GEGL_LONG_SHADOW_STYLE_FADING_FIXED_RATE3,   "fading-fixed-length-stretch3",   N_("Fading (fixed rate)3"))
-#else
-  enum_value_skip (GEGL_LONG_SHADOW_STYLE_FADING_FIXED_RATE3)
-#endif
-enum_end (GeglLongShadowStyle3)
-
-enum_start (gegl_long_shadow_composition3)
-  enum_value (GEGL_LONG_SHADOW_COMPOSITION_SHADOW_PLUS_IMAGE3,  "shadow-plus-image3",  N_("Shadow plus image mode"))
-  enum_value (GEGL_LONG_SHADOW_COMPOSITION_SHADOW_ONLY3,        "shadow-only3",        N_("Shadow only mode"))
-  enum_value (GEGL_LONG_SHADOW_COMPOSITION_SHADOW_MINUS_IMAGE3, "shadow-minus-image3", N_("Shadow minus image mode"))
-enum_end (GeglLongShadowComposition3)
-
-property_enum (style2, _("Style 2"),
-               GeglLongShadowStyle3, gegl_long_shadow_style3,
-               GEGL_LONG_SHADOW_STYLE_FADING_FIXED_LENGTH3)
-  description (_("Shadow style"))
-    ui_meta     ("role", "output-extent")
 
 property_double (angle, _("Angle"), 45.0)
   description (_("Shadow angle"))
@@ -82,13 +46,6 @@ property_double (length, _("Length"), 40)
   description (_("Shadow length"))
   value_range (0, 55)
   ui_range    (0, 55)
-
-
-property_enum (composition, _("Composition"),
-               GeglLongShadowComposition2, gegl_long_shadow_composition2,
-               GEGL_LONG_SHADOW_COMPOSITION_SHADOW_ONLY2)
-  description (_("Output composition"))
-    ui_meta     ("role", "output-extent")
 
 
 property_double (lengthblur, _("Length of Pixel Data colors"), 100.0)
@@ -109,6 +66,16 @@ property_double (lightness, _("Lightness"), 0.0)
    description  (_("Lightness adjustment"))
    value_range  (-30.0, 30.0)
 
+enum_start (gegl_blend_mode_typelspd)
+  enum_value (GEGL_BLEND_MODE_TYPE_STANDALONE,      "standalone",
+              N_("Stand Alone"))
+  enum_value (GEGL_BLEND_MODE_TYPE_BEHIND, "behind",
+              N_("Behind"))
+enum_end (GeglBlendModeTypelspd)
+
+property_enum (extract_or_behind, _("Position of Extrusion"),
+    GeglBlendModeTypelspd, gegl_blend_mode_typelspd,
+    GEGL_BLEND_MODE_TYPE_BEHIND)
 
 #else
 
@@ -125,17 +92,55 @@ typedef struct
   GeglNode *ls;
   GeglNode *ls2;
   GeglNode *lmb;
+  GeglNode *behind;
+  GeglNode *normal;
   GeglNode *lightchroma;
   GeglNode *output;
 } State; 
+
+
+static void
+update_graph (GeglOperation *operation)
+{
+  GeglProperties *o = GEGL_PROPERTIES (operation);
+  State *state = o->user_data;
+  if (!state) return;
+
+  GeglNode *aloneorbehind = state->normal; /* the default */
+  switch (o->extract_or_behind) {
+    case GEGL_BLEND_MODE_TYPE_STANDALONE: aloneorbehind = state->normal; break;
+    case GEGL_BLEND_MODE_TYPE_BEHIND: aloneorbehind = state->behind; break;
+;default: aloneorbehind = state->behind;
+
+}
+
+  if (o->ls2)
+  {
+         gegl_node_link_many (state->input, aloneorbehind, state->output, NULL);
+      gegl_node_connect_from (aloneorbehind, "aux", state->lightchroma, "output");
+         gegl_node_link_many (state->input, state->ls2, state->alock, state->lightchroma, NULL);
+      gegl_node_link_many (state->input, state->lmb, NULL);
+      gegl_node_connect_from (state->alock, "aux", state->lmb, "output");
+  }
+  else
+  {
+         gegl_node_link_many (state->input, aloneorbehind, state->output, NULL);
+      gegl_node_connect_from (aloneorbehind, "aux", state->lightchroma, "output");
+         gegl_node_link_many (state->input, state->ls, state->alock, state->lightchroma, NULL);
+      gegl_node_link_many (state->input, state->lmb, NULL);
+      gegl_node_connect_from (state->alock, "aux", state->lmb, "output");
+  }
+}
+
+
 
 
 
 static void attach (GeglOperation *operation)
 {
   GeglNode *gegl = operation->node;
-  GeglProperties *o = GEGL_PROPERTIES (operation);
-  GeglNode *input, *output, *ls, *ls2, *alock, *lightchroma, *lmb;
+GeglProperties *o = GEGL_PROPERTIES (operation);
+  GeglNode *input, *output, *ls, *ls2, *alock, *behind, *normal, *lightchroma, *lmb;
 
   input    = gegl_node_get_input_proxy (gegl, "input");
   output   = gegl_node_get_output_proxy (gegl, "output");
@@ -146,12 +151,12 @@ static void attach (GeglOperation *operation)
                                   NULL);
 
   ls    = gegl_node_new_child (gegl,
-                                  "operation", "gegl:long-shadow",
+                                  "operation", "gegl:long-shadow", "style", 0, "composition", 1,
                                   NULL);
 
 
   ls2    = gegl_node_new_child (gegl,
-                                  "operation", "gegl:long-shadow",
+                                  "operation", "gegl:long-shadow", "style", 3, "composition", 1,
                                   NULL);
 
 
@@ -163,26 +168,26 @@ static void attach (GeglOperation *operation)
                                   "operation", "gegl:hue-chroma",
                                   NULL);
 
+  behind    = gegl_node_new_child (gegl,
+                                  "operation", "gegl:dst-over",
+                                  NULL);
+
+  normal    = gegl_node_new_child (gegl,
+                                  "operation", "gegl:over",
+                                  NULL);
 
 
 
-  gegl_operation_meta_redirect (operation, "style", ls, "style");
-  gegl_operation_meta_redirect (operation, "style2", ls2, "style");
+
+
+
   gegl_operation_meta_redirect (operation, "angle", ls2, "angle");
   gegl_operation_meta_redirect (operation, "angle", ls, "angle"); 
   gegl_operation_meta_redirect (operation, "length", ls, "length"); 
-  gegl_operation_meta_redirect (operation, "composition", ls, "composition"); 
   gegl_operation_meta_redirect (operation, "angle", lmb, "angle"); 
   gegl_operation_meta_redirect (operation, "lengthblur", lmb, "length"); 
   gegl_operation_meta_redirect (operation, "chroma", lightchroma, "chroma"); 
   gegl_operation_meta_redirect (operation, "lightness", lightchroma, "lightness"); 
-
-
-
-
-  gegl_node_link_many (input, ls, /*ls2*/ alock, lightchroma, output, NULL);
-  gegl_node_link_many (input, lmb, NULL);
- gegl_node_connect_from (alock, "aux", lmb, "output");
 
 
 
@@ -197,42 +202,21 @@ static void attach (GeglOperation *operation)
   state->alock = alock;
   state->lmb = lmb;
   state->lightchroma = lightchroma;
+  state->behind = behind;
+  state->normal = normal;
   state->output = output;
+
   o->user_data = state;
 }
-
-static void
-update_graph (GeglOperation *operation)
-{
-  GeglProperties *o = GEGL_PROPERTIES (operation);
-  State *state = o->user_data;
-  if (!state) return;
-
-  if (o->ls2)
-  {
-         gegl_node_link_many (state->input, state->ls2, state->alock, state->lightchroma, state->output, NULL);
-      gegl_node_link_many (state->input, state->lmb, NULL);
-      gegl_node_connect_from (state->alock, "aux", state->lmb, "output");
-  }
-  else
-  {
-         gegl_node_link_many (state->input, state->ls, state->alock, state->lightchroma, state->output, NULL);
-      gegl_node_link_many (state->input, state->lmb, NULL);
-      gegl_node_connect_from (state->alock, "aux", state->lmb, "output");
-  }
-}
-
-
-
-
 
 
 
 static void
 gegl_op_class_init (GeglOpClass *klass)
 {
-  GeglOperationClass *operation_class = GEGL_OPERATION_CLASS (klass);
-   GeglOperationMetaClass *operation_meta_class = GEGL_OPERATION_META_CLASS (klass);
+  GeglOperationClass *operation_class;
+GeglOperationMetaClass *operation_meta_class = GEGL_OPERATION_META_CLASS (klass);
+  operation_class = GEGL_OPERATION_CLASS (klass);
 
   operation_class->attach = attach;
   operation_meta_class->update = update_graph;
