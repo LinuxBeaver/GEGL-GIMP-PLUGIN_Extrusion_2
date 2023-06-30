@@ -1,15 +1,17 @@
-# GEGL-Extrusion 2. (Fork of GEGL Long Shadow) REQUIRES BEHIND BLEND MODE OR DUPLICATE LAYER BELOW!
+# GEGL Extrusion 2 Gimp Plugin. (Fork of GEGL Long Shadow) 
 
 GEGL does a Long Shadow but with Pixel Data. As opposed to a Color fill. 
 
-![image preview](banner.png )
+![image](https://github.com/LinuxBeaver/GEGL-Extrusion-2----Fork-of-GEGL-Long-Shadow/assets/78667207/96e58c1d-2d07-4c58-b5cd-c57ee986ce49)
+
+
 
 ![image preview](preview1.png )
 
 ![image preview](preview2.png )
 
 ## Instructions 
-If you do not use the optional binary then you must manually compile and put the .so/dll files in gegl-0.4/plug-ins. Then restart Gimp and go to Gimp's GEGL operations.
+If you do not use the optional binarys then you must manually compile and put the .so/dll files in gegl-0.4/plug-ins. Then restart Gimp and go to Gimp's GEGL operations.
 
 ## OS specific location to put GEGL Filter binaries 
 
