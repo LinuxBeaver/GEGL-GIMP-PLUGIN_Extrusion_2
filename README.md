@@ -4,8 +4,6 @@ GEGL does a Long Shadow but with Pixel Data. As opposed to a Color fill.
 
 ![image](https://github.com/LinuxBeaver/GEGL-Extrusion-2----Fork-of-GEGL-Long-Shadow/assets/78667207/96e58c1d-2d07-4c58-b5cd-c57ee986ce49)
 
-
-
 ![image preview](preview1.png )
 
 ![image preview](preview2.png )
@@ -23,6 +21,9 @@ C:\Users\USERNAME\AppData\Local\gegl-0.4\plug-ins
  
  Linux (Flatpak)
  /home/(USERNAME)/.var/app/org.gimp.GIMP/data/gegl-0.4/plug-ins
+
+ ![image](https://github.com/LinuxBeaver/GEGL-Extrusion-2----Fork-of-GEGL-Long-Shadow/assets/78667207/dc6d4b6b-d1e8-4f3d-a4bf-a13036dc466a)
+
 
 
 ## Compiling and Installing
