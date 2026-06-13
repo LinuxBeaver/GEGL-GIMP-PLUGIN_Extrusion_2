@@ -20,7 +20,7 @@
 /*
 
 Recreation of GEGL Graph - May not be 100% accurate or complete but shows the process of how I forked long shadow.
-If you feed this to Gimp's GEGL Graph filter you can test this plugin without installing it.
+If you feed this to Gimpꞌs GEGL Graph filter you can test this plugin without installing it.
 
 id=0
 dst-over aux=[ ref=0 
